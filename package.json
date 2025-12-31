@@ -4,13 +4,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js"
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
   },
   "repository": "https://github.com/mister-asia/simple-backend.git",
   "author": "Александр Алиновский <aalinovskiy@alfabank.ru>",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "fastify": "^4.25.2"
   }
 }
