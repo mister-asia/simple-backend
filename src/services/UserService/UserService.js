@@ -1,4 +1,4 @@
-import Db from "../db/Db.js";
+import Db from "../../db/Db.js";
 
 class UserService {
   constructor() {
