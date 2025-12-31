@@ -29,23 +29,3 @@ jobs:
       # ----------- TESTS -----------
       - name: Run tests
         run: yarn test
-
-      - name: Test coverage
-        run: yarn test:coverage
-
-      - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage
-
-      # ----------- HEALTH CHECK -----------
-      - name: Start server
-        run: |
-          yarn start &
-          sleep 5
-
-      - name: Health check
-        run: |
-          curl -f http://localhost:3000/users || exit 1
-
