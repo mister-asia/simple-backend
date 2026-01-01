@@ -7,7 +7,7 @@ const fastify = createApp();
 const start = async () => {
   try {
     await fastify.listen({ port: config.port, host: config.host });
-    console.log(`Сервер запущен на http://localhost:${config.port}`);
+    console.log(`Сервер крутится на http://localhost:${config.port}`);
   } catch (err) {
     fastify.log.error(err);
     process.exit(1);

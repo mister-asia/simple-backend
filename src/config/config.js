@@ -5,8 +5,8 @@ import { dirname, join } from "path";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Загружаем переменные окружения из родительской папки
-const envPath = join(__dirname, "..", "..", "..", "backend.env");
+// Загружаем переменные окружения из корня проекта
+const envPath = join(__dirname, "..", "..", ".env");
 dotenv.config({ path: envPath });
 
 export const config = {

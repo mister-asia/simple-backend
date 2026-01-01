@@ -7,7 +7,7 @@ const __dirname = dirname(__filename);
 
 class Db {
   constructor() {
-    this.dataPath = join(__dirname, "..", "..", "mock");
+    this.dataPath = join(__dirname, "..", "mock");
   }
 
   /**

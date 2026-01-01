@@ -9,14 +9,7 @@ const __dirname = dirname(__filename);
 
 describe("UserService", () => {
   let userService;
-  const testFilePath = join(
-    __dirname,
-    "..",
-    "..",
-    "..",
-    "mock",
-    "test-users.json"
-  );
+  const testFilePath = join(__dirname, "..", "..", "mock", "test-users.json");
   const testUsers = [
     { id: 1, name: "Иван Тестовый", email: "ivan.test@example.com" },
     { id: 2, name: "Мария Тестовая", email: "maria.test@example.com" },

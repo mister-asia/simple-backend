@@ -26,6 +26,8 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # ----------- TESTS -----------
+      - name: Create .env file for tests
+        run: echo "PORT=3000" > .env
+
       - name: Run tests
         run: yarn test
