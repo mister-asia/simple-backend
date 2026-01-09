@@ -1,34 +1,61 @@
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import pg from "pg";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { Pool } = pg;
 
 class Db {
   constructor() {
-    this.dataPath = join(__dirname, "..", "mock");
+    this.pool = null;
+    this.isConnected = false;
   }
 
   /**
-   * Получить путь к файлу данных (приватный метод)
+   * Подключиться к базе данных
+   * @param {Object} config - Конфигурация подключения к БД
+   * @param {string} config.host - Хост базы данных
+   * @param {number} config.port - Порт базы данных
+   * @param {string} config.database - Название базы данных
+   * @param {string} config.user - Имя пользователя
+   * @param {string} config.password - Пароль
+   * @returns {Promise<void>}
+   */
+  async connect(config) {
+    if (this.isConnected) {
+      console.log("База данных уже подключена");
+      return;
+    }
+
+    try {
+      this.pool = new Pool(config);
+      // Проверяем подключение
+      await this.pool.query("SELECT NOW()");
+      this.isConnected = true;
+      console.log("✓ Успешно подключено к базе данных");
+    } catch (error) {
+      console.error("✗ Ошибка подключения к базе данных:", error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Закрыть пул подключений
+   */
+  async close() {
+    if (this.pool) {
+      await this.pool.end();
+      this.isConnected = false;
+      console.log("✓ Подключение к базе данных закрыто");
+    }
+  }
+
+  /**
+   * Получить имя таблицы из коллекции (приватный метод)
    * @param {string} collection - Название коллекции (например, 'users')
-   * @returns {string} Полный путь к файлу
+   * @returns {string} Имя таблицы
    * @private
    */
-  #getFilePath(collection) {
-    return join(this.dataPath, `${collection}.json`);
-  }
-
-  /**
-   * Проверить существование коллекции (приватный метод)
-   * @param {string} collection - Название коллекции
-   * @returns {boolean} Существует ли коллекция
-   * @private
-   */
-  #collectionExists(collection) {
-    const filePath = this.#getFilePath(collection);
-    return existsSync(filePath);
+  #getTableName(collection) {
+    // Экранируем имя таблицы для безопасности
+    return `"${collection}"`;
   }
 
   /**
@@ -37,25 +64,15 @@ class Db {
    * @returns {Promise<Array>} Промис с массивом записей
    */
   async find(collection) {
-    return new Promise((resolve, reject) => {
-      try {
-        const filePath = this.#getFilePath(collection);
-
-        if (!this.#collectionExists(collection)) {
-          return resolve([]);
-        }
-
-        const data = readFileSync(filePath, "utf-8");
-        const records = JSON.parse(data);
-        resolve(records);
-      } catch (error) {
-        reject(
-          new Error(
-            `Ошибка при чтении коллекции ${collection}: ${error.message}`
-          )
-        );
-      }
-    });
+    try {
+      const tableName = this.#getTableName(collection);
+      const result = await this.pool.query(`SELECT * FROM ${tableName}`);
+      return result.rows;
+    } catch (error) {
+      throw new Error(
+        `Ошибка при чтении коллекции ${collection}: ${error.message}`
+      );
+    }
   }
 
   /**
@@ -65,17 +82,22 @@ class Db {
    * @returns {Promise<Object|null>} Промис с найденной записью или null
    */
   async findOne(collection, query) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
-        const found = records.find((record) => {
-          return Object.keys(query).every((key) => record[key] === query[key]);
-        });
-        resolve(found || null);
-      } catch (error) {
-        reject(new Error(`Ошибка при поиске записи: ${error.message}`));
-      }
-    });
+    try {
+      const tableName = this.#getTableName(collection);
+      const conditions = Object.keys(query)
+        .map((key, index) => `"${key}" = $${index + 1}`)
+        .join(" AND ");
+      const values = Object.values(query);
+
+      const result = await this.pool.query(
+        `SELECT * FROM ${tableName} WHERE ${conditions} LIMIT 1`,
+        values
+      );
+
+      return result.rows[0] || null;
+    } catch (error) {
+      throw new Error(`Ошибка при поиске записи: ${error.message}`);
+    }
   }
 
   /**
@@ -85,17 +107,22 @@ class Db {
    * @returns {Promise<Array>} Промис с массивом найденных записей
    */
   async findMany(collection, query) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
-        const found = records.filter((record) => {
-          return Object.keys(query).every((key) => record[key] === query[key]);
-        });
-        resolve(found);
-      } catch (error) {
-        reject(new Error(`Ошибка при поиске записей: ${error.message}`));
-      }
-    });
+    try {
+      const tableName = this.#getTableName(collection);
+      const conditions = Object.keys(query)
+        .map((key, index) => `"${key}" = $${index + 1}`)
+        .join(" AND ");
+      const values = Object.values(query);
+
+      const result = await this.pool.query(
+        `SELECT * FROM ${tableName} WHERE ${conditions}`,
+        values
+      );
+
+      return result.rows;
+    } catch (error) {
+      throw new Error(`Ошибка при поиске записей: ${error.message}`);
+    }
   }
 
   /**
@@ -105,27 +132,32 @@ class Db {
    * @returns {Promise<Object>} Промис с вставленной записью
    */
   async insertOne(collection, data) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
+    try {
+      const tableName = this.#getTableName(collection);
 
-        // Генерируем ID если его нет
-        if (!data.id) {
-          const maxId =
-            records.length > 0 ? Math.max(...records.map((r) => r.id || 0)) : 0;
-          data.id = maxId + 1;
-        }
-
-        records.push(data);
-
-        const filePath = this.#getFilePath(collection);
-        writeFileSync(filePath, JSON.stringify(records, null, 2), "utf-8");
-
-        resolve(data);
-      } catch (error) {
-        reject(new Error(`Ошибка при вставке записи: ${error.message}`));
+      // Если ID не указан, генерируем его автоматически
+      if (!data.id) {
+        const maxIdResult = await this.pool.query(
+          `SELECT COALESCE(MAX(id), 0) as max_id FROM ${tableName}`
+        );
+        const maxId = parseInt(maxIdResult.rows[0].max_id) || 0;
+        data.id = maxId + 1;
       }
-    });
+
+      const keys = Object.keys(data);
+      const columns = keys.map((key) => `"${key}"`).join(", ");
+      const placeholders = keys.map((_, index) => `$${index + 1}`).join(", ");
+      const values = Object.values(data);
+
+      const result = await this.pool.query(
+        `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders}) RETURNING *`,
+        values
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Ошибка при вставке записи: ${error.message}`);
+    }
   }
 
   /**
@@ -136,34 +168,29 @@ class Db {
    * @returns {Promise<number>} Промис с количеством обновленных записей
    */
   async updateMany(collection, query, update) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
-        let updatedCount = 0;
+    try {
+      const tableName = this.#getTableName(collection);
+      const updateFields = Object.keys(update)
+        .map((key, index) => `"${key}" = $${index + 1}`)
+        .join(", ");
+      const conditions = Object.keys(query)
+        .map(
+          (key, index) =>
+            `"${key}" = $${Object.keys(update).length + index + 1}`
+        )
+        .join(" AND ");
 
-        const updatedRecords = records.map((record) => {
-          const matches = Object.keys(query).every(
-            (key) => record[key] === query[key]
-          );
-          if (matches) {
-            updatedCount++;
-            return { ...record, ...update };
-          }
-          return record;
-        });
+      const values = [...Object.values(update), ...Object.values(query)];
 
-        const filePath = this.#getFilePath(collection);
-        writeFileSync(
-          filePath,
-          JSON.stringify(updatedRecords, null, 2),
-          "utf-8"
-        );
+      const result = await this.pool.query(
+        `UPDATE ${tableName} SET ${updateFields} WHERE ${conditions}`,
+        values
+      );
 
-        resolve(updatedCount);
-      } catch (error) {
-        reject(new Error(`Ошибка при обновлении записей: ${error.message}`));
-      }
-    });
+      return result.rowCount;
+    } catch (error) {
+      throw new Error(`Ошибка при обновлении записей: ${error.message}`);
+    }
   }
 
   /**
@@ -173,29 +200,22 @@ class Db {
    * @returns {Promise<number>} Промис с количеством удаленных записей
    */
   async deleteMany(collection, query) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
-        const initialLength = records.length;
+    try {
+      const tableName = this.#getTableName(collection);
+      const conditions = Object.keys(query)
+        .map((key, index) => `"${key}" = $${index + 1}`)
+        .join(" AND ");
+      const values = Object.values(query);
 
-        const filteredRecords = records.filter((record) => {
-          return !Object.keys(query).every((key) => record[key] === query[key]);
-        });
+      const result = await this.pool.query(
+        `DELETE FROM ${tableName} WHERE ${conditions}`,
+        values
+      );
 
-        const deletedCount = initialLength - filteredRecords.length;
-
-        const filePath = this.#getFilePath(collection);
-        writeFileSync(
-          filePath,
-          JSON.stringify(filteredRecords, null, 2),
-          "utf-8"
-        );
-
-        resolve(deletedCount);
-      } catch (error) {
-        reject(new Error(`Ошибка при удалении записей: ${error.message}`));
-      }
-    });
+      return result.rowCount;
+    } catch (error) {
+      throw new Error(`Ошибка при удалении записей: ${error.message}`);
+    }
   }
 
   /**
@@ -206,27 +226,36 @@ class Db {
    * @returns {Promise<Object>} Промис с объектом пагинации
    */
   async paginate(collection, page = 1, limit = 10) {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const records = await this.find(collection);
-        const startIndex = (page - 1) * limit;
-        const endIndex = startIndex + limit;
-        const paginatedRecords = records.slice(startIndex, endIndex);
+    try {
+      const tableName = this.#getTableName(collection);
+      const offset = (page - 1) * limit;
 
-        resolve({
-          data: paginatedRecords,
-          pagination: {
-            page,
-            limit,
-            total: records.length,
-            totalPages: Math.ceil(records.length / limit),
-          },
-        });
-      } catch (error) {
-        reject(new Error(`Ошибка при пагинации: ${error.message}`));
-      }
-    });
+      // Получаем общее количество записей
+      const countResult = await this.pool.query(
+        `SELECT COUNT(*) as total FROM ${tableName}`
+      );
+      const total = parseInt(countResult.rows[0].total);
+
+      // Получаем записи с пагинацией
+      const result = await this.pool.query(
+        `SELECT * FROM ${tableName} ORDER BY id LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+
+      return {
+        data: result.rows,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    } catch (error) {
+      throw new Error(`Ошибка при пагинации: ${error.message}`);
+    }
   }
 }
 
-export default Db;
+// Создаем и экспортируем единственный экземпляр (Singleton)
+export const db = new Db();

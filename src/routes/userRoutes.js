@@ -1,6 +1,7 @@
 import UserService from "../services/UserService/UserService.js";
+import { db } from "../db/Db.js";
 
-const userService = new UserService();
+const userService = new UserService(db);
 
 export default async function userRoutes(fastify, options) {
   // Роут для получения пользователей (с опциональной пагинацией)
@@ -42,4 +43,3 @@ export default async function userRoutes(fastify, options) {
     }
   });
 }
-

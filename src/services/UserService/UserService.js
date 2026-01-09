@@ -1,8 +1,6 @@
-import Db from "../../db/Db.js";
-
 class UserService {
-  constructor() {
-    this.db = new Db();
+  constructor(db) {
+    this.db = db;
     this.collection = "users";
   }
 

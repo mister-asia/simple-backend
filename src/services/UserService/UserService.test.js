@@ -9,19 +9,64 @@ const __dirname = dirname(__filename);
 
 describe("UserService", () => {
   let userService;
+  let testUsers;
   const testFilePath = join(__dirname, "..", "..", "mock", "test-users.json");
-  const testUsers = [
+  const initialTestUsers = [
     { id: 1, name: "Иван Тестовый", email: "ivan.test@example.com" },
     { id: 2, name: "Мария Тестовая", email: "maria.test@example.com" },
     { id: 3, name: "Петр Тестовый", email: "petr.test@example.com" },
   ];
 
   beforeEach(() => {
+    // Создаем свежую копию данных для каждого теста
+    testUsers = JSON.parse(JSON.stringify(initialTestUsers));
+
     // Создаем тестовый файл с данными
     writeFileSync(testFilePath, JSON.stringify(testUsers, null, 2), "utf-8");
 
-    // Создаем экземпляр сервиса
-    userService = new UserService();
+    // Создаем мок для db
+    const mockDb = {
+      connect: async () => {},
+      close: async () => {},
+      find: async () => testUsers,
+      findOne: async (collection, query) =>
+        testUsers.find((user) => user.id === query.id) || null,
+      insertOne: async (collection, data) => {
+        const maxId = Math.max(...testUsers.map((u) => u.id), 0);
+        const newUser = { ...data, id: maxId + 1 };
+        testUsers.push(newUser);
+        return newUser;
+      },
+      updateOne: async (collection, query, data) => data,
+      updateMany: async (collection, query, data) => {
+        const index = testUsers.findIndex((user) => user.id === query.id);
+        if (index === -1) return 0;
+        testUsers[index] = { ...testUsers[index], ...data };
+        return 1;
+      },
+      deleteMany: async (collection, query) => {
+        const index = testUsers.findIndex((user) => user.id === query.id);
+        if (index === -1) return 0;
+        testUsers.splice(index, 1);
+        return 1;
+      },
+      paginate: async (collection, page = 1, limit = 10) => {
+        const offset = (page - 1) * limit;
+        const data = testUsers.slice(offset, offset + limit);
+        return {
+          data,
+          pagination: {
+            page,
+            limit,
+            total: testUsers.length,
+            totalPages: Math.ceil(testUsers.length / limit),
+          },
+        };
+      },
+    };
+
+    // Создаем экземпляр сервиса с моком
+    userService = new UserService(mockDb);
     // Переопределяем коллекцию на тестовую
     userService.collection = "test-users";
   });
