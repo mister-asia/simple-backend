@@ -4,9 +4,16 @@ npm-debug.log
 .git
 .gitignore
 README.md
+QUICKSTART.md
+docs
 .DS_Store
 coverage
 .vscode
 .idea
 *.log
+*.test.js
+vitest.config.js
+Makefile
+.dockerignore
+docker-compose.override.yml
 

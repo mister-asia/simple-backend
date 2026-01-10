@@ -2,7 +2,8 @@
 
 Простой backend на Node.js с использованием Fastify и PostgreSQL.
 
-> 🚀 **Быстрый старт:** см. [QUICKSTART.md](./QUICKSTART.md)
+> 🚀 **Быстрый старт:** см. [QUICKSTART.md](./QUICKSTART.md)  
+> 📋 **Все команды:** см. [docs/COMMANDS.md](./docs/COMMANDS.md)
 
 ## Особенности архитектуры
 
@@ -35,30 +36,52 @@ const userService = new UserService(db);
 
 ## Установка и запуск
 
-### Быстрый старт с Docker
+### 🐳 Разработка в Docker (рекомендуется)
+
+**Запуск приложения и базы данных в Docker с hot-reload:**
 
 ```bash
 # 1. Скопировать пример конфигурации
 cp .env.example .env
 
-# 2. Запустить базу данных через Docker
-make db-up
-
-# 3. Установить зависимости
-make install
-
-# 4. Инициализировать и заполнить базу
-make db-init
-make db-seed
-
-# 5. Запустить сервер в режиме разработки
-make dev
+# 2. Собрать и запустить всё (БД + приложение + инициализация + hot-reload)
+yarn setup:dev
 ```
 
-Или одной командой:
+Приложение будет доступно на `http://localhost:3000` с автоматической перезагрузкой при изменении файлов.
+
+**Что делает `yarn setup:dev`:**
+- Запускает PostgreSQL в Docker
+- Собирает Docker образ для разработки (с devDependencies)
+- Монтирует исходный код для hot-reload
+- Инициализирует базу данных
+- Запускает приложение с `node --watch`
+
+**Просмотр логов:**
+```bash
+yarn docker:dev:logs     # Логи приложения (разработка)
+yarn docker:db:logs      # Логи базы данных
+```
+
+### 🚀 Production в Docker
+
+**Запуск приложения в production-режиме:**
 
 ```bash
-cp .env.example .env && make install && make setup && make dev
+# 1. Скопировать пример конфигурации
+cp .env.example .env
+
+# 2. Собрать и запустить всё
+yarn setup:docker
+```
+
+Приложение будет доступно на `http://localhost:3000` без hot-reload (production режим).
+
+**Просмотр логов:**
+```bash
+yarn docker:logs          # Все сервисы
+yarn docker:app:logs      # Только приложение
+yarn docker:db:logs       # Только база данных
 ```
 
 ### Доступные команды Make
@@ -78,32 +101,69 @@ make test        # Запустить тесты
 make setup       # Полная настройка (БД + таблицы + данные)
 ```
 
-### Ручная установка (без Make)
+### Доступные npm скрипты
+
+**Управление Docker:**
+
+**Разработка:**
+```bash
+yarn docker:dev:build   # Собрать образ для разработки
+yarn docker:dev:up      # Запустить в режиме разработки (hot-reload)
+yarn docker:dev:down    # Остановить (разработка)
+yarn docker:dev:logs    # Логи приложения (разработка)
+yarn docker:dev:rebuild # Пересобрать и запустить (разработка)
+```
+
+**Production:**
+```bash
+yarn docker:build       # Собрать образ приложения
+yarn docker:up          # Запустить все сервисы (БД + приложение)
+yarn docker:down        # Остановить все сервисы
+yarn docker:restart     # Перезапустить все сервисы
+yarn docker:rebuild     # Пересобрать и запустить
+yarn docker:reset       # Пересоздать всё с нуля (удалить данные)
+yarn docker:logs        # Показать логи всех сервисов
+yarn docker:app:logs    # Показать логи приложения
+```
+
+**База данных:**
+```bash
+yarn docker:db:up       # Запустить только БД
+yarn docker:db:logs     # Логи базы данных
+```
+
+**Управление базой данных:**
 
 ```bash
-# Установка зависимостей
-yarn install
+yarn db:init        # Создать таблицы
+yarn db:seed        # Заполнить тестовыми данными
+yarn db:clear       # Очистить таблицы
+yarn db:reset       # Очистить и заполнить заново
+yarn db:setup       # init + seed (полная настройка БД)
+```
 
-# Создать .env файл с настройками БД
-cp .env.example .env
+**Запуск приложения:**
 
-# Запустить PostgreSQL через Docker
-docker-compose up -d
+```bash
+yarn start          # Запустить сервер локально
+yarn dev            # Запустить локально в режиме разработки (с hot-reload)
+yarn dev:docker     # Запустить в Docker в режиме разработки (с hot-reload)
+```
 
-# Инициализация базы данных (создание таблиц)
-yarn db:init
+**Тестирование:**
 
-# Заполнение базы тестовыми данными
-yarn db:seed
+```bash
+yarn test           # Запустить тесты
+yarn test:watch     # Тесты в режиме watch
+yarn test:coverage  # Тесты с coverage
+yarn test:ui        # Тесты с UI интерфейсом
+```
 
-# Запуск сервера
-yarn start
+**Полная настройка одной командой:**
 
-# Запуск в режиме разработки
-yarn dev
-
-# Запуск тестов
-yarn test
+```bash
+yarn setup:dev       # Разработка в Docker: БД + приложение + hot-reload
+yarn setup:docker    # Production в Docker: БД + приложение (production режим)
 ```
 
 ## Структура проекта

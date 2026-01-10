@@ -1,5 +1,5 @@
-import { db } from "../src/db/Db.js";
-import { config } from "../src/config/config.js";
+import { db } from "../../src/db/Db.js";
+import { config } from "../../src/config/config.js";
 
 /**
  * Скрипт для очистки таблицы users
@@ -21,7 +21,7 @@ async function clearDatabase() {
     `);
 
     if (!tableExists.rows[0].exists) {
-      console.log("Таблица users не существует. Сначала выполните: npm run db:init");
+      console.log("Таблица users не существует. Сначала выполните: yarn db:init");
       await db.close();
       return;
     }

@@ -1,8 +1,8 @@
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { db } from "../src/db/Db.js";
-import { config } from "../src/config/config.js";
+import { db } from "../../src/db/Db.js";
+import { config } from "../../src/config/config.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,14 +30,14 @@ async function seedDatabase() {
 
     if (!tableExists.rows[0].exists) {
       console.log(
-        "Таблица users не существует. Сначала выполните: npm run db:init"
+        "Таблица users не существует. Сначала выполните: yarn db:init"
       );
       await db.close();
       return;
     }
 
     // Читаем данные из JSON файла
-    const usersPath = join(__dirname, "..", "src", "mock", "users.json");
+    const usersPath = join(__dirname, "..", "..", "src", "mock", "users.json");
     const usersData = JSON.parse(readFileSync(usersPath, "utf-8"));
 
     console.log(`Найдено ${usersData.length} пользователей для добавления`);
@@ -49,7 +49,7 @@ async function seedDatabase() {
         `В базе уже есть ${existingUsers.length} пользователей. Пропускаем заполнение.`
       );
       console.log(
-        "Если хотите перезаполнить базу, сначала выполните: npm run db:clear"
+        "Если хотите перезаполнить базу, сначала выполните: yarn db:clear"
       );
       await db.close();
       return;
