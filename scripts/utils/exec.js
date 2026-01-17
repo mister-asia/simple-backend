@@ -1,32 +1,4 @@
 import { exec } from "child_process";
-import { promisify } from "util";
-
-const execAsync = promisify(exec);
-
-/**
- * Выполняет shell команду и возвращает результат
- * @param {string} command - Команда для выполнения
- * @param {object} options - Опции для exec (cwd, env, etc.)
- * @returns {Promise<{stdout: string, stderr: string}>}
- */
-export async function execCommand(command, options = {}) {
-  try {
-    const { stdout, stderr } = await execAsync(command, {
-      ...options,
-      encoding: "utf8",
-    });
-    return { stdout: stdout.trim(), stderr: stderr.trim() };
-  } catch (error) {
-    if (error.stdout || error.stderr) {
-      return {
-        stdout: error.stdout?.trim() || "",
-        stderr: error.stderr?.trim() || "",
-        error: error.message,
-      };
-    }
-    throw error;
-  }
-}
 
 /**
  * Выполняет команду и выводит результат в реальном времени
