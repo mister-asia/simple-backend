@@ -26,6 +26,6 @@ jobs:
             --abort-on-container-exit \
             --exit-code-from test
 
-          - name: Cleanup
-          if: always()
-          run: docker compose -f docker/docker-compose.test.yml down -v
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker/docker-compose.test.yml down -v

@@ -18,7 +18,7 @@ services:
 
   test:
     build:
-      context: ../..
+      context: ..
       dockerfile: docker/Dockerfile.test
     container_name: test-runner
     depends_on:
