@@ -3,18 +3,23 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "private": true,
   "scripts": {
     "dev": "nodemon src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "db:start": "docker-compose -f docker-compose.dev.yml up -d",
-    "db:stop": "docker-compose -f docker-compose.dev.yml down",
+    "db:start": "docker-compose -f docker/docker-compose.dev.yml up -d",
+    "db:stop": "docker-compose -f docker/docker-compose.dev.yml down",
     "db:init": "node scripts/db/init.js",
     "db:seed": "node scripts/db/seed.js",
     "db:clear": "node scripts/db/clear.js",
-    "db:reset": "node scripts/db/clear.js && node scripts/db/seed.js"
+    "db:reset": "node scripts/db/clear.js && node scripts/db/seed.js",
+    "test:docker": "node scripts/db/init.js && vitest run"
   },
   "repository": "https://github.com/mister-asia/simple-backend.git",
   "author": "Александр Алиновский <aalinovskiy@alfabank.ru>",

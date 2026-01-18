@@ -2,32 +2,30 @@ name: CI
 
 on:
   push:
-    branches:
-      - "**" # запуск на любые ветки
+    branches: ["**"]
   pull_request:
-    branches:
-      - master
-      - main
+    branches: [main, master]
 
 jobs:
-  build-test-lint:
+  test:
     runs-on: ubuntu-latest
+
+    env:
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: test_db
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
+      - name: Run tests in Docker
+        run: |
+          docker compose -f docker/docker-compose.test.yml up \
+            --build \
+            --abort-on-container-exit \
+            --exit-code-from test
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Create .env file for tests
-        run: echo "PORT=3000" > .env
-
-      - name: Run tests
-        run: yarn test
+          - name: Cleanup
+          if: always()
+          run: docker compose -f docker/docker-compose.test.yml down -v

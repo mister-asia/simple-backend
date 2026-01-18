@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Копируем package files
+COPY package.json yarn.lock ./
+
+# Устанавливаем зависимости
+RUN yarn install --frozen-lockfile
+
+# CHANGED: явно указываем окружение
+ENV NODE_ENV=test
+
+# Копируем весь код
+COPY . .
+
+# Команда по умолчанию - запуск тестов
+CMD ["yarn", "test"]
